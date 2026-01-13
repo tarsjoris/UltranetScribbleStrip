@@ -149,7 +149,7 @@ class MainActivity : ComponentActivity() {
                 Text(
                     text = channelData.name,
                     color = color.text,
-                    fontSize = 28.sp,
+                    fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth()
@@ -158,10 +158,9 @@ class MainActivity : ComponentActivity() {
             Text(
                 text = "${index + 1}",
                 color = color.text,
-                fontSize = 28.sp,
+                fontSize = 26.sp,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
-                    .weight(0f)
             )
         }
     }
