@@ -5,17 +5,16 @@ import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetAddress
 
-fun searchXR18(): InetAddress? {
+data class XR18Info(val address: InetAddress, val name: String)
+
+fun searchXR18(): XR18Info? {
     val socket = DatagramSocket().also { it.soTimeout = 5000 }
     try {
-        socket.broadcast = true
+        socket.broadcast = false
         val payload = OSCMessage("/info").serialize()
         socket.send(
             DatagramPacket(
-                payload,
-                payload.size,
-                InetAddress.getByName("255.255.255.255"),
-                XR18OSCAPI.PORT
+                payload, payload.size, InetAddress.getByName("192.168.0.238"), XR18OSCAPI.PORT
             )
         )
 
@@ -24,7 +23,8 @@ fun searchXR18(): InetAddress? {
         socket.receive(udpPacket)
         val packet = parsePacket(udpPacket.data, udpPacket.length)
         if (packet is OSCMessage && packet.address == "/info") {
-            return udpPacket.address
+            val name = packet.getString(1)
+            return XR18Info(udpPacket.address, name ?: "unknown")
         }
     } catch (e: Throwable) {
         Log.e("UltranetScribbleStrip", "Got error while searching XR18", e)

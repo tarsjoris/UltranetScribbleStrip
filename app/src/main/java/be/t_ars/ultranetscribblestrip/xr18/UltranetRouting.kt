@@ -1,38 +1,50 @@
 package be.t_ars.ultranetscribblestrip.xr18
 
+import android.content.Context
 import android.util.Log
-import kotlinx.coroutines.coroutineScope
+import android.widget.Toast
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.net.InetAddress
 import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
 
 data class UltranetChannelInfo(val name: String, val color: Int)
 
-suspend fun getUltranetInfo(): Array<UltranetChannelInfo>? {
+typealias UltranetInfo = Array<UltranetChannelInfo>
+
+suspend fun CoroutineScope.getUltranetInfo(context: Context): UltranetInfo? {
     Log.i("UltranetScribbleStrip", "Searching for XR18")
-    val address = searchXR18()
-    if (address != null) {
-        Log.i("UltranetScribbleStrip", "Found at $address")
-        return loadData(address)
+    val xr18Info = searchXR18()
+    if (xr18Info != null) {
+        Log.i("UltranetScribbleStrip", "Found at ${xr18Info.address}")
+        withContext(Dispatchers.Main) {
+            Toast.makeText(context, "Connected to ${xr18Info.name}", Toast.LENGTH_LONG).show()
+        }
+        return loadData(xr18Info.address)
     } else {
+        withContext(Dispatchers.Main) {
+            Toast.makeText(context, "No XR18 found", Toast.LENGTH_LONG).show()
+        }
         return null
     }
 }
 
-private suspend fun loadData(address: InetAddress): Array<UltranetChannelInfo>? {
+private suspend fun CoroutineScope.loadData(address: InetAddress): UltranetInfo? {
     val xR18OSCAPI = XR18OSCAPI(address)
     try {
         return requestData(xR18OSCAPI)
     } catch (e: Throwable) {
-        Log.e("UltranetScribbleStrip", "Got error while searching XR18", e)
+        Log.e("UltranetScribbleStrip", "Got error while querying XR18", e)
     } finally {
-        xR18OSCAPI.stop();
+        xR18OSCAPI.stop()
     }
     return null
 }
 
-private suspend fun requestData(xR18OSCAPI: XR18OSCAPI): Array<UltranetChannelInfo> {
+private suspend fun CoroutineScope.requestData(xR18OSCAPI: XR18OSCAPI): UltranetInfo {
     val routingSources = IntArray(16) { -1 }
     val routingSourceNames = Array(XR18OSCAPI.ROUTING_SOURCE_COUNT) {
         when (it) {
@@ -151,7 +163,9 @@ private suspend fun requestData(xR18OSCAPI: XR18OSCAPI): Array<UltranetChannelIn
         }
     }
     xR18OSCAPI.addListener(listener)
-    coroutineScope { launch { xR18OSCAPI.handleResponses() } }
+
+    launch { xR18OSCAPI.handleResponses() }
+
     repeat(XR18OSCAPI.ROUTING_COUNT) {
         requestParameter(semaphore) { xR18OSCAPI.requestP16RoutingSource(it + 1) }
     }

@@ -1,5 +1,6 @@
 package be.t_ars.ultranetscribblestrip.xr18
 
+import android.util.Log
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -44,7 +45,7 @@ class XR18OSCAPI(private var host: InetAddress) {
         private const val DEBUG = false
     }
 
-    private val socket: DatagramSocket = DatagramSocket().also { it.soTimeout = 5000 }
+    private val socket: DatagramSocket = DatagramSocket().also { it.soTimeout = 20000 }
     private val running = AtomicBoolean(true)
     private val listeners = SuspendingListeners<IOSCListener>()
 
@@ -88,12 +89,18 @@ class XR18OSCAPI(private var host: InetAddress) {
                     processPacket(packet)
                 } catch (e: Exception) {
                     val data = String(udpPacket.data, 0, udpPacket.length)
-                    println("Could not process packet '$data': ${e.message}")
-                    e.printStackTrace()
+                    Log.w(
+                        "UltranetScribbleStrip",
+                        "Could not process packet '$data': ${e.message}",
+                        e
+                    )
                 }
             }
         } catch (_: SocketException) {
-            println("Socket closed: stopped handling responses")
+            Log.i("UltranetScribbleStrip", "Socket closed.")
+        }
+        finally {
+            Log.i("UltranetScribbleStrip", "Stopped handling responses")
         }
     }
 
@@ -169,7 +176,11 @@ class XR18OSCAPI(private var host: InetAddress) {
         }
     }
 
-    private suspend fun processChannelMessage(channel: Int, parts: List<String>, message: OSCMessage) {
+    private suspend fun processChannelMessage(
+        channel: Int,
+        parts: List<String>,
+        message: OSCMessage
+    ) {
         when (parts[3]) {
             "mix" -> {
                 when (parts[4]) {
@@ -226,7 +237,11 @@ class XR18OSCAPI(private var host: InetAddress) {
         }
     }
 
-    private suspend fun processReturnMessage(returnChannel: Int, parts: List<String>, message: OSCMessage) {
+    private suspend fun processReturnMessage(
+        returnChannel: Int,
+        parts: List<String>,
+        message: OSCMessage
+    ) {
         when (parts[3]) {
             "mix" -> {
                 when (parts[4]) {
@@ -300,7 +315,11 @@ class XR18OSCAPI(private var host: InetAddress) {
         }
     }
 
-    private suspend fun processFXSendMessage(fxSend: Int, parts: List<String>, message: OSCMessage) {
+    private suspend fun processFXSendMessage(
+        fxSend: Int,
+        parts: List<String>,
+        message: OSCMessage
+    ) {
         when (parts[3]) {
             "mix" -> {
                 when (parts[4]) {
@@ -395,7 +414,11 @@ class XR18OSCAPI(private var host: InetAddress) {
         }
     }
 
-    private suspend fun processP16RoutingMessage(routing: Int, parts: List<String>, message: OSCMessage) {
+    private suspend fun processP16RoutingMessage(
+        routing: Int,
+        parts: List<String>,
+        message: OSCMessage
+    ) {
         when (parts[4]) {
             "src" -> {
                 val src = message.getInt(0)
@@ -473,7 +496,7 @@ class XR18OSCAPI(private var host: InetAddress) {
 
     fun requestReturnColor(returnChannel: Int) {
         validateReturn(returnChannel)
-        requestColor("/bus/$returnChannel")
+        requestColor("/rtn/$returnChannel")
     }
 
     fun requestFXSendName(fxSend: Int) {
@@ -561,8 +584,8 @@ class XR18OSCAPI(private var host: InetAddress) {
 
     private fun printPacket(prefix: String, data: ByteArray) {
         if (DEBUG) {
-            println("[$prefix] ${String(data)}")
-            //println(data.joinToString(separator = ",", transform = { it.toString() }))
+            Log.i("UltranetScribbleStrip", "[$prefix] ${String(data)}")
+            Log.i("UltranetScribbleStrip", data.joinToString(separator = ",", transform = { it.toString() }))
         }
     }
 }

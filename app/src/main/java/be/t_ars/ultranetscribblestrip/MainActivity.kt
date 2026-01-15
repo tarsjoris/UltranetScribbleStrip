@@ -2,6 +2,7 @@ package be.t_ars.ultranetscribblestrip
 
 import android.annotation.SuppressLint
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -41,6 +42,7 @@ import be.t_ars.ultranetscribblestrip.xr18.UltranetChannelInfo
 import be.t_ars.ultranetscribblestrip.xr18.XR18OSCAPI
 import be.t_ars.ultranetscribblestrip.xr18.getUltranetInfo
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -70,12 +72,20 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         updateData(Array(XR18OSCAPI.ROUTING_COUNT) { UltranetChannelInfo("-", 0) })
+    }
+
+    override fun onResume() {
+        super.onResume()
 
         lifecycleScope.launch {
             val info = withContext(Dispatchers.IO) {
-                getUltranetInfo()
+                getUltranetInfo(this@MainActivity)
             }
-            info?.let { updateData(it) }
+            info?.let {
+                withContext(Dispatchers.Main) {
+                    updateData(it)
+                }
+            }
         }
     }
 
@@ -105,7 +115,7 @@ class MainActivity : ComponentActivity() {
                                 .background(ScribbleBackground)
                         ) {
                             repeat(4) { column ->
-                                renderCell(row, column, data)
+                                RenderCell(row, column, data)
                             }
                         }
                     }
@@ -115,7 +125,7 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    private fun RowScope.renderCell(row: Int, column: Int, data: Array<UltranetChannelInfo>) {
+    private fun RowScope.RenderCell(row: Int, column: Int, data: Array<UltranetChannelInfo>) {
         val index = row * 4 + column
         val channelData = data[index]
         val color = colors[channelData.color]
@@ -157,7 +167,7 @@ class MainActivity : ComponentActivity() {
             }
             Text(
                 text = "${index + 1}",
-                color = color.text,
+                color = ScribbleWhite,
                 fontSize = 26.sp,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
