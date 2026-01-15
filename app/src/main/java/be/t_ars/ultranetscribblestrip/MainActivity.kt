@@ -1,25 +1,25 @@
 package be.t_ars.ultranetscribblestrip
 
-import android.annotation.SuppressLint
 import android.os.Bundle
-import android.widget.Toast
+import android.util.Log
+import android.view.MotionEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -42,7 +42,6 @@ import be.t_ars.ultranetscribblestrip.xr18.UltranetChannelInfo
 import be.t_ars.ultranetscribblestrip.xr18.XR18OSCAPI
 import be.t_ars.ultranetscribblestrip.xr18.getUltranetInfo
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -77,28 +76,45 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
 
+        triggerRefresh()
+    }
+
+    override fun dispatchTouchEvent(ev: MotionEvent?): Boolean {
+        if (ev?.action == MotionEvent.ACTION_DOWN) {
+            triggerRefresh()
+        }
+
+        return super.dispatchTouchEvent(ev)
+    }
+
+    private fun triggerRefresh() {
         lifecycleScope.launch {
-            val info = withContext(Dispatchers.IO) {
-                getUltranetInfo(this@MainActivity)
-            }
-            info?.let {
-                withContext(Dispatchers.Main) {
-                    updateData(it)
+            try {
+                val info = withContext(Dispatchers.IO) {
+                    getUltranetInfo(this@MainActivity)
                 }
+                info?.let {
+                    withContext(Dispatchers.Main) {
+                        updateData(it)
+                    }
+                }
+            } catch (e: Throwable) {
+                Log.e("UltranetScribbleStrip", "Got error while querying XR18", e)
             }
         }
     }
 
-    @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
     private fun updateData(data: Array<UltranetChannelInfo>) {
         setContent {
             Scaffold(
                 modifier = Modifier
-                    .fillMaxSize()
-            ) {
+                    .fillMaxSize(),
+                contentWindowInsets = WindowInsets.safeDrawing
+            ) { innerPadding ->
                 Column(
                     modifier = Modifier
                         .fillMaxHeight()
+                        .padding(innerPadding)
                         .background(ScribbleBlack)
                 ) {
                     repeat(4) { row ->

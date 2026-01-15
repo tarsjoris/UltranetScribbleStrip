@@ -45,7 +45,7 @@ class XR18OSCAPI(private var host: InetAddress) {
         private const val DEBUG = false
     }
 
-    private val socket: DatagramSocket = DatagramSocket().also { it.soTimeout = 20000 }
+    private val socket: DatagramSocket = DatagramSocket().also { it.soTimeout = 5000 }
     private val running = AtomicBoolean(true)
     private val listeners = SuspendingListeners<IOSCListener>()
 
@@ -79,28 +79,31 @@ class XR18OSCAPI(private var host: InetAddress) {
 
     suspend fun handleResponses() {
         try {
-            val buffer = ByteArray(256)
-            val udpPacket = DatagramPacket(buffer, buffer.size)
             while (running.get()) {
-                socket.receive(udpPacket)
-                printPacket("IN", udpPacket.data)
-                try {
-                    val packet = parsePacket(udpPacket.data, udpPacket.length)
-                    processPacket(packet)
-                } catch (e: Exception) {
-                    val data = String(udpPacket.data, 0, udpPacket.length)
-                    Log.w(
-                        "UltranetScribbleStrip",
-                        "Could not process packet '$data': ${e.message}",
-                        e
-                    )
-                }
+                handleResponse()
             }
         } catch (_: SocketException) {
             Log.i("UltranetScribbleStrip", "Socket closed.")
-        }
-        finally {
+        } finally {
             Log.i("UltranetScribbleStrip", "Stopped handling responses")
+        }
+    }
+
+    suspend fun handleResponse(): Boolean {
+        socket.receive(UdpPacket)
+        printPacket("IN", UdpPacket.data)
+        try {
+            val packet = parsePacket(UdpPacket.data, UdpPacket.length)
+            processPacket(packet)
+            return true
+        } catch (e: Exception) {
+            val data = String(UdpPacket.data, 0, UdpPacket.length)
+            Log.w(
+                "UltranetScribbleStrip",
+                "Could not process packet '$data': ${e.message}",
+                e
+            )
+            return false
         }
     }
 
@@ -585,7 +588,14 @@ class XR18OSCAPI(private var host: InetAddress) {
     private fun printPacket(prefix: String, data: ByteArray) {
         if (DEBUG) {
             Log.i("UltranetScribbleStrip", "[$prefix] ${String(data)}")
-            Log.i("UltranetScribbleStrip", data.joinToString(separator = ",", transform = { it.toString() }))
+            Log.i(
+                "UltranetScribbleStrip",
+                data.joinToString(separator = ",", transform = { it.toString() })
+            )
         }
     }
+
+    private val Buffer = ByteArray(256)
+    private val UdpPacket = DatagramPacket(Buffer, Buffer.size)
+
 }
