@@ -10,11 +10,11 @@ data class XR18Info(val address: InetAddress, val name: String)
 fun searchXR18(): XR18Info? {
     val socket = DatagramSocket().also { it.soTimeout = 5000 }
     try {
-        socket.broadcast = false
+        socket.broadcast = true
         val payload = OSCMessage("/info").serialize()
         socket.send(
             DatagramPacket(
-                payload, payload.size, InetAddress.getByName("192.168.0.238"), XR18OSCAPI.PORT
+                payload, payload.size, InetAddress.getByName("255.255.255.255"), XR18OSCAPI.PORT
             )
         )
 
